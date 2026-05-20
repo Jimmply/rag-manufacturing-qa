@@ -1,0 +1,20 @@
+rag:
+  chunk_size: 500
+  chunk_overlap: 50
+  embedding_model: "text-embedding-3-small"
+  top_k_results: 5
+  collection_name: "manufacturing_docs"
+
+llm:
+  default_provider: "anthropic"
+  anthropic_model: "claude-3-5-haiku-20241022"
+  openai_model: "gpt-4o-mini"
+  max_tokens: 1024
+  temperature: 0.1
+
+data:
+  docs_path: data/sample_docs/
+  chroma_persist_path: data/chroma_db/
+
+dashboard:
+  page_title: "Manufacturing Document Q&A"
