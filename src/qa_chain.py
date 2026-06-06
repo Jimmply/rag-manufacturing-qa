@@ -123,10 +123,13 @@ class ManufacturingQAChain:
 
         response: AIMessage = self.llm.invoke(messages)
 
+        retrieval_confidence = self._compute_confidence(results)
+
         return {
             "answer": response.content,
             "sources": sources,
             "context": context,
+            "retrieval_confidence": retrieval_confidence,
         }
 
     def stream_answer(
@@ -157,7 +160,34 @@ class ManufacturingQAChain:
             if hasattr(chunk, "content") and chunk.content:
                 yield chunk.content
 
-        yield {"sources": sources, "context": context}
+        yield {
+            "sources": sources,
+            "context": context,
+            "retrieval_confidence": self._compute_confidence(results),
+        }
+
+    @staticmethod
+    def _compute_confidence(results: list) -> float:
+        """
+        Estimate retrieval confidence from similarity scores.
+
+        Returns a 0–1 float: mean similarity of the top retrieved chunks,
+        clipped so values below 0.3 are treated as low-confidence.
+        """
+        if not results:
+            return 0.0
+        scores = []
+        for doc in results:
+            score = None
+            if hasattr(doc, "metadata") and isinstance(doc.metadata, dict):
+                score = doc.metadata.get("score") or doc.metadata.get("relevance_score")
+            if score is None and isinstance(doc, tuple) and len(doc) == 2:
+                score = doc[1]
+            if score is not None:
+                scores.append(float(score))
+        if not scores:
+            return 0.5  # unknown — assume moderate confidence
+        return round(min(1.0, max(0.0, float(sum(scores) / len(scores)))), 3)
 
     def change_provider(self, provider: str, model: str | None = None) -> None:
         """Hot-swap the LLM provider without rebuilding the retriever."""
